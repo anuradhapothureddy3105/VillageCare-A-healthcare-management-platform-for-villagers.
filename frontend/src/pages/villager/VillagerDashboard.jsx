@@ -1,0 +1,184 @@
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../services/api.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { Link } from 'react-router-dom';
+import {
+  Home,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  Heart,
+  Baby,
+  AlertCircle,
+  FileText,
+  User,
+  ArrowRight,
+} from 'lucide-react';
+
+export const VillagerDashboard = () => {
+  const { user } = useAuth();
+  const { t, lang, tContent } = useLanguage();
+
+  const [household, setHousehold] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [pregnancyRecord, setPregnancyRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchVillagerData = async () => {
+      try {
+        setLoading(true);
+        const hhId = user?.householdId || 'HH-PTP-001';
+
+        const [hhRes, recRes, pregRes] = await Promise.all([
+          apiFetch(`/households/${hhId}`).catch(() => ({ success: false })),
+          apiFetch(`/recommendations/${hhId}`).catch(() => ({ success: false })),
+          apiFetch('/pregnancy').catch(() => ({ success: false })),
+        ]);
+
+        if (hhRes.success) setHousehold(hhRes.household);
+        if (recRes.success) setRecommendations(recRes.recommendations);
+        if (pregRes.success && pregRes.records && pregRes.records.length > 0) {
+          setPregnancyRecord(pregRes.records[0]);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVillagerData();
+  }, [user]);
+
+  if (loading) {
+    return <div className="py-12 text-center text-xs text-slate-400">Loading your health hub...</div>;
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Welcome Card */}
+      <div className="bg-gradient-to-r from-emerald-800 to-teal-800 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
+            Pentapadu Resident Portal
+          </span>
+          <h1 className="text-xl sm:text-2xl font-black mt-2">
+            Namaskaram, {user?.fullName}!
+          </h1>
+          <p className="text-xs text-emerald-100 mt-1">
+            Household: <strong className="text-white">{household?.householdId || user?.householdId}</strong> ({household?.street}, Pentapadu)
+          </p>
+        </div>
+
+        <Link
+          to="/villager/consent"
+          className="self-start sm:self-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition flex items-center space-x-1.5"
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-300" />
+          <span>DPDP Consent Settings</span>
+        </Link>
+      </div>
+
+      {/* Maternal Health Callout if Enrolled */}
+      {pregnancyRecord && (
+        <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shrink-0">
+              <Baby className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded-full">
+                Active Maternal Care Plan
+              </span>
+              <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                {pregnancyRecord.villagerName} ({pregnancyRecord.beneficiaryId})
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Expected Delivery Date (EDD): <strong>{new Date(pregnancyRecord.eddDate).toLocaleDateString()}</strong> • Pentapadu PHC
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/villager/maternal"
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-1.5 self-start sm:self-center"
+          >
+            <span>View Check-up Timeline</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
+      {/* Personalized Hygiene & Health Recommendations */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">
+              {lang === 'te' ? 'మీ కుటుంబానికి ఆరోగ్య & పరిశుభ్రత సూచనలు' : 'Personalized Hygiene Suggestions for Your Household'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              Generated by the VillageCare rule-based engine from your verified doorstep survey
+            </p>
+          </div>
+        </div>
+
+        {recommendations.length === 0 ? (
+          <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center text-xs text-slate-500">
+            No pending hygiene issues. Your household meets verified drinking water and sanitation standards!
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recommendations.map((rec) => (
+              <div
+                key={rec.recommendationId}
+                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-sm text-slate-900">
+                    {tContent(rec.title)}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+                    {rec.category}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {tContent(rec.description)}
+                </p>
+
+                <div className="p-3 bg-amber-50/70 border border-amber-200/70 rounded-xl text-xs text-amber-900">
+                  <strong>{lang === 'te' ? 'కారణం: ' : 'Why this was suggested: '}</strong>
+                  {tContent(rec.reason)}
+                </div>
+
+                {rec.suggestedPractices && rec.suggestedPractices.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                      {lang === 'te' ? 'ఆచరించాల్సిన అలవాట్లు' : 'Suggested Daily Practices'}
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {rec.suggestedPractices.map((p, idx) => (
+                        <div key={idx} className="p-2.5 bg-slate-50 rounded-xl flex items-start space-x-2 text-xs text-slate-700">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-600 shrink-0 mt-0.5" />
+                          <span>{lang === 'te' ? p.te : p.en}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Non-Diagnostic Disclaimer */}
+      <div className="p-4 bg-slate-100 rounded-2xl text-[11px] text-slate-600 text-center leading-relaxed">
+        {t('nonDiagnosticDisclaimer')}
+      </div>
+    </div>
+  );
+};

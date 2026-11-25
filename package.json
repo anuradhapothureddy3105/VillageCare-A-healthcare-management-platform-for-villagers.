@@ -1,0 +1,24 @@
+{
+  "name": "villagecare",
+  "version": "1.0.0",
+  "description": "VILLAGECARE - Smart Village Health & Hygiene Monitoring System for Pentapadu Village",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "seed": "cd backend && node src/data/seedData.js"
+  },
+  "keywords": [
+    "village-health",
+    "hygiene-monitoring",
+    "maternal-health",
+    "btech-cse",
+    "community-service-project",
+    "pentapadu",
+    "andhra-pradesh"
+  ],
+  "author": "B.Tech CSE Community Service Project",
+  "license": "ISC"
+}
